@@ -1,5 +1,6 @@
 import pygame
 import numpy as np
+import math
 
 # Initialize
 pygame.init()
@@ -65,6 +66,9 @@ def render(x, y): #projected graphical points --> points to render
 camera_position = np.array([0, 0, -1 * distance])
 
 camera_yaw = 0
+camera_pitch = 0
+camera_pitch_min = -math.pi/2
+camera_pitch_max = math.pi/2
 rotation_speed = 1.5
 
 # Main loop
@@ -83,6 +87,12 @@ while running:
         camera_yaw += rotation_speed * dt
     elif keys[pygame.K_LEFT]:
         camera_yaw -= rotation_speed * dt
+    if keys[pygame.K_UP]:
+        if camera_pitch < camera_pitch_max:
+            camera_pitch += rotation_speed * dt
+    elif keys[pygame.K_DOWN]:
+        if camera_pitch > camera_pitch_min:
+            camera_pitch -= rotation_speed * dt
 
     screen.fill(BLACK)
 
@@ -92,7 +102,13 @@ while running:
         [-np.sin(camera_yaw), 0, np.cos(camera_yaw)]
     ])
 
-    camera_baseplate_vertices = (rotation_y.T @ (baseplate_points-camera_position).T).T
+    rotation_x = np.array([
+        [1, 0, 0],
+        [0, np.cos(camera_pitch), -np.sin(camera_pitch)],
+        [0, np.sin(camera_pitch), np.cos(camera_pitch)]
+    ])
+
+    camera_baseplate_vertices = (rotation_x.T @ rotation_y.T @ (baseplate_points-camera_position).T).T
 
     edge_baseplate_points = np.empty((0, 2, 3))
 
@@ -108,9 +124,7 @@ while running:
                 point_a = intersect
             else:
                 point_b = intersect
-        if z_start >= near_plane and z_end >= near_plane:
-            print("both inside")
-        elif z_start < near_plane and z_end < near_plane:
+        if z_start < near_plane and z_end < near_plane:
             continue
         edge_baseplate_points = np.vstack((edge_baseplate_points, [[point_a, point_b]]))
 
