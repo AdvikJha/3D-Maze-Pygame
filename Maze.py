@@ -50,10 +50,17 @@ focal_length = 1
 distance = 10
 scale = 100
 
+near_plane = 0.1
+
 def projection(x, y, z):
     x_2d = (focal_length * x)/z
     y_2d = (focal_length * y)/z
     return x_2d, y_2d
+
+def render(x, y): #projected graphical points --> points to render
+    rendered_x = x * scale + WIDTH/2
+    rendered_y = y * scale + HEIGHT/2
+    return rendered_x, rendered_y
 
 camera_position = np.array([0, 0, -1 * distance])
 
@@ -73,9 +80,9 @@ while running:
     keys = pygame.key.get_pressed()
 
     if keys[pygame.K_RIGHT]:
-        camera_yaw -= rotation_speed * dt
-    elif keys[pygame.K_LEFT]:
         camera_yaw += rotation_speed * dt
+    elif keys[pygame.K_LEFT]:
+        camera_yaw -= rotation_speed * dt
 
     screen.fill(BLACK)
 
@@ -85,21 +92,34 @@ while running:
         [-np.sin(camera_yaw), 0, np.cos(camera_yaw)]
     ])
 
-    projected_points = np.empty((0, 2))
-    render_points = np.empty((0, 2))
-
     camera_baseplate_vertices = (rotation_y.T @ (baseplate_points-camera_position).T).T
 
-    for x, y, z in camera_baseplate_vertices:  #Render Points
-        x_2d, y_2d = projection(x, y, z)
-        projected_points = np.vstack((projected_points, [x_2d, y_2d]))
-        rendered_x = x_2d*scale+WIDTH/2
-        rendered_y = y_2d*scale+HEIGHT/2
-        render_points = np.vstack((render_points, [rendered_x, rendered_y]))
-        pygame.draw.circle(screen, WHITE, (round(x_2d*scale+WIDTH/2), round(y_2d*scale+HEIGHT/2)), 3)
+    edge_baseplate_points = np.empty((0, 2, 3))
 
-    for start, end in baseplate_edges: #Render Edges
-        pygame.draw.line(screen, WHITE, tuple(render_points[start]), tuple(render_points[end]), 3)
+    for start, end in baseplate_edges:
+        z_start = camera_baseplate_vertices[start][2]
+        z_end = camera_baseplate_vertices[end][2]
+        point_a = camera_baseplate_vertices[start]
+        point_b = camera_baseplate_vertices[end]
+        if (z_start < near_plane) != (z_end < near_plane):
+            interpolation_factor = (near_plane - z_start)/ (z_end - z_start)
+            intersect = point_a + interpolation_factor * (point_b - point_a)
+            if z_start < near_plane:
+                point_a = intersect
+            else:
+                point_b = intersect
+        if z_start >= near_plane and z_end >= near_plane:
+            print("both inside")
+        elif z_start < near_plane and z_end < near_plane:
+            continue
+        edge_baseplate_points = np.vstack((edge_baseplate_points, [[point_a, point_b]]))
+
+    for point_a, point_b in edge_baseplate_points: #Render Edges
+        x_a, y_a = projection(point_a[0], point_a[1], point_a[2])
+        x_b, y_b = projection(point_b[0], point_b[1], point_b[2])
+        rendered_x_a, rendered_y_a = render(x_a, y_a)
+        rendered_x_b, rendered_y_b = render(x_b, y_b)
+        pygame.draw.line(screen, WHITE, (rendered_x_a, rendered_y_a), (rendered_x_b, rendered_y_b), 3)
 
     pygame.display.flip()
 
