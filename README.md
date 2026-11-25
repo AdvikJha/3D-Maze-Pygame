@@ -1,21 +1,33 @@
 # 3D-Maze-Pygame
-This is a maze simulation built entirely in Python with only pygame and numpy. It is currently a work in progress.
+This is a maze simulation built entirely in python with only pygame and numpy. It is currently a work in progress.
 
 ## Features
- - 3D Software Rendering
+ - 3D Coordinate System
  - Perspective Projection
  - World-to-Camera Transformation
  - Camera Yaw Rotation
  - Near Plane Clipping
 
 ## How it works
-First, we must edit the coordinates of the baseplate relative to our perspective. I applied the World-to-Camera Transformation formula where $V_{camera}$ is camera_baseplate_vertices, $V_{world}$ is baseplate_points, $C$ is camera_position, $R_y$ is rotation_y, and $\theta$ is camera_yaw. We use the inverse of the camera's rotation matrix because we are transforming world coordinates into camera space. Instead of making the camera orbit the world, we use the opposite rotation to the world coordinates to express their positions relative to the camera. We can calculate the inverse using the transpose because rotation matrices are orthogonal.
+First, we must edit the coordinates of the baseplate relative to our perspective. In Line 91, I apply the World-to-Camera Transformation formula where $V_{camera}$ is camera_baseplate_vertices, $V_{world}$ is baseplate_points, $C$ is camera_position, $R_y$ is rotation_y, $R_x$ is rotation_x, $\theta$ is camera_yaw, and $\phi$ is camera_pitch. To avoid having people looking too far up or down I set the range to $-\frac{\pi}{2} \leq \phi \leq \frac{\pi}{2}$ For this formula we must use the inverse of $R_y$ because $R_y$ would rotate world relative to the camera so the inverse rotates the camera relative to the world. We can calculate the inverse using the transpose because rotation matrices are orthogonal.
 
 World-to-Camera Transformation Formula:
 
 $$
-V_{camera}=R_y^{-1}(V_{world}-C)
+V_{camera}=R_x^{-1} \cdot R_y^{-1}(V_{world}-C)
 $$
+
+X Rotation Matrix:
+
+$$
+R_x=
+\begin{bmatrix}
+1 & 0 & 0\\
+0 & \cos(\phi) & -\sin(\phi)\\
+0 & \sin(\phi) & \cos(\phi)
+\end{bmatrix}
+$$
+
 
 Y Rotation Matrix:
 
@@ -28,16 +40,16 @@ R_y=
 \end{bmatrix}
 $$
 
-The simulation starts with three dimensional coordinates for my baseplate. Because pygame is a two dimensional environment, we must project these points onto a two dimensional screen. I used the Perspective Projection Equation (formula shown below) where f is focal length and d is camera distance.
+The simulation starts with three dimensional coordinates for my baseplate (Line 22). Because pygame is a two dimensional environment, we must project these points onto a two dimensional screen. I used the Perspective Projection Equation (formula shown below) on Line 53 of my code where f is focal length and d is camera distance.
 
 
 $$
-2D = \left(\frac{xf}{z_{camera}+d}, \frac{yf}{z_{camera}+d}\right)
+2D = \left(\frac{xf}{z+d}, \frac{yf}{z+d}\right)
 $$
 
-Though in my code, d is not used and instead the denominator is just z. This is because on I have already subtracted camera position. 
+Though in my code, d is not used and instead the denominator is just z. This is because on Line 91 I have already subtracted camera position. 
 
-Once we have the projected points, we need to render the points by centering it and multiplying by scale.
+Once we have the projected points, we need to render the points by centering it and multiplying by scale as I did in Lines 96-97.
 
 $$
 \text{Rendered} =
@@ -48,21 +60,9 @@ y_{\text{2D}}\cdot s+\frac{\text{H}}{2}
 \right)
 $$
 
-Next, we use Near Plane Clipping to allow geometry that is behind or too close to the camera to be hidden. Without it, points will be shown even when not in the line of sight of the camera. I calculated Near Plane using Linear Interpolation.
+## Current Issues
 
-\[
-P=A+t(B-A)
-\]
-
-\[
-t=\frac{z_{\text{near}}-z_A}{z_B-z_A}
-\]
-
-$A$: Starting endpoint of the edge
-$B$: Ending endpoint of the edge
-$P$: Point where Near Plane intersects with Edge 
-$t$: Interpolation factor between 0 and 1
-$z_{near}$: Camera-space depth of the near plane
+As of now, the camera yaw makes unwanted shapes and patterns at certain angles and when turned fully around, you can see the baseplate upside down. This is because of the Perspective Projection Equation. It works most of the time but when z=0, the coordinates are undefined causing unwanted coordinate behavior and negative z values can cause inverted geometry. This problem will be mostly fixed once I implement Near Plane Clipping in a future commit.
 
 ## Installation
 
