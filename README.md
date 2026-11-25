@@ -5,7 +5,7 @@ This is a maze simulation built entirely in python with only pygame and numpy. I
  - 3D Coordinate System
  - Perspective Projection
  - World-to-Camera Transformation
- - Camera Yaw Rotation
+ - Camera Yaw and Pitch Rotation
  - Near Plane Clipping
 
 ## How it works
