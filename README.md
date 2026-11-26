@@ -10,7 +10,7 @@ This is a maze simulation built entirely in python with only pygame and numpy. I
  - Near Plane Clipping
 
 ## How it works
-First, we must edit the coordinates of the baseplate relative to our perspective. I applied the World-to-Camera Transformation formula where $V_{camera}$ is camera_baseplate_vertices, $V_{world}$ is baseplate_points, $C$ is camera_position, $R_y$ is rotation_y, $R_x$ is rotation_x, $\theta$ is camera_yaw, and $\phi& is camera_pitch. To avoid having people looking too far up or down I set the range to $-\frac{\pi}{2} \leq \phi \leq \frac{\pi}{2} For this formula we must use the inverse of Ry because Ry would rotate world relative to the camera so the inverse rotates the camera relative to the world. We can calculate the inverse using the transpose because rotation matrices are orthogonal.
+First, we must edit the coordinates of the baseplate relative to our perspective. I applied the World-to-Camera Transformation formula where $V_{camera}$ is camera_baseplate_vertices, $V_{world}$ is baseplate_points, $C$ is camera_position, $R_y$ is rotation_y, $R_x$ is rotation_x, $\theta$ is camera_yaw, and $\phi$ is camera_pitch. To avoid having people looking too far up or down I set the range to $-\frac{\pi}{2} \leq \phi \leq \frac{\pi}{2} For this formula we must use the inverse of Ry because Ry would rotate world relative to the camera so the inverse rotates the camera relative to the world. We can calculate the inverse using the transpose because rotation matrices are orthogonal.
 
 World-to-Camera Transformation Formula:
 
