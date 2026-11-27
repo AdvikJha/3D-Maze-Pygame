@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import math
+import random
 
 # Initialize
 pygame.init()
@@ -46,12 +47,49 @@ baseplate_edges = np.array([
     [3, 7],
 ])
 
+baseplate_faces = np.array([
+    [0, 2, 3, 1],  # Top
+    [4, 5, 7, 6],  # Bottom
+    [0, 1, 5, 4],  # Front (+Z)
+    [2, 6, 7, 3],  # Back (-Z)
+    [0, 4, 6, 2],  # Right (+X)
+    [1, 3, 7, 5],  # Left (-X)
+])
+
+baseplate_side_colors = [
+    (255, 0, 0),
+    (122.5, 122.5, 0),
+    (0, 255, 0),
+    (0, 122.5, 122.5),
+    (0, 0, 255),
+    (255, 0, 255)
+]
 
 focal_length = 1
 distance = 10
 scale = 100
 
 near_plane = 0.1
+
+def clip_polygon(vertices, near_plane):
+    clipped = []
+
+    for i in range(len(vertices)):
+        current = vertices[i]
+        previous = vertices[i - 1]
+
+        current_inside = current[2] >= near_plane
+        previous_inside = previous[2] >= near_plane
+
+        if current_inside != previous_inside:
+            t = (near_plane - previous[2]) / (current[2] - previous[2])
+            intersection = previous + t * (current - previous)
+            clipped.append(intersection)
+
+        if current_inside:
+            clipped.append(current)
+
+    return clipped
 
 def projection(x, y, z):
     x_2d = (focal_length * x)/z
@@ -63,13 +101,15 @@ def render(x, y): #projected graphical points --> points to render
     rendered_y = y * scale + HEIGHT/2
     return rendered_x, rendered_y
 
-camera_position = np.array([0, 0, -1 * distance])
+camera_position = np.array([0.0, -2.0, -1.0 * distance])
+camera_facing_direction = np.array([0, 0, 1])
 
 camera_yaw = 0
 camera_pitch = 0
 camera_pitch_min = -math.pi/2
 camera_pitch_max = math.pi/2
 rotation_speed = 1.5
+movement_speed = 5
 
 # Main loop
 running = True
@@ -83,6 +123,19 @@ while running:
 
     keys = pygame.key.get_pressed()
 
+    forward = np.array([
+        np.sin(camera_yaw),
+        0,
+        np.cos(camera_yaw)
+    ])
+
+    right = np.array([
+        np.cos(camera_yaw),
+        0,
+        -np.sin(camera_yaw)
+    ])
+
+    #Camera Direction
     if keys[pygame.K_RIGHT]:
         camera_yaw += rotation_speed * dt
     elif keys[pygame.K_LEFT]:
@@ -93,6 +146,21 @@ while running:
     elif keys[pygame.K_DOWN]:
         if camera_pitch > camera_pitch_min:
             camera_pitch -= rotation_speed * dt
+
+    #Camera Movement
+    if keys[pygame.K_q]:
+        camera_position[1] += movement_speed * dt
+    elif keys[pygame.K_e]:
+        camera_position[1] -= movement_speed * dt
+    if keys[pygame.K_w]:
+        camera_position += movement_speed * dt * forward
+    elif keys[pygame.K_s]:
+        camera_position -= movement_speed * dt * forward
+    if keys[pygame.K_d]:
+        camera_position += movement_speed * dt * right
+    elif keys[pygame.K_a]:
+        camera_position -= movement_speed * dt * right
+
 
     screen.fill(BLACK)
 
@@ -134,6 +202,37 @@ while running:
         rendered_x_a, rendered_y_a = render(x_a, y_a)
         rendered_x_b, rendered_y_b = render(x_b, y_b)
         pygame.draw.line(screen, WHITE, (rendered_x_a, rendered_y_a), (rendered_x_b, rendered_y_b), 3)
+
+    for i, face in enumerate(baseplate_faces):
+        face_vertices = [camera_baseplate_vertices[index] for index in face]
+
+        clipped_vertices = clip_polygon(face_vertices, near_plane)
+
+        if len(clipped_vertices) >= 3:
+            projected_face = []
+
+            for vertex in clipped_vertices:
+                x, y, z = vertex
+                x_2d, y_2d = projection(x, y, z)
+
+                screen_x = int(x_2d * scale + WIDTH / 2)
+                screen_y = int(y_2d * scale + HEIGHT / 2)
+
+                projected_face.append((screen_x, screen_y))
+
+            A = clipped_vertices[0]
+            B = clipped_vertices[1]
+            C = clipped_vertices[2]
+
+            camera_facing_direction = -(A + B + C)/3
+
+            normal = np.cross(B - A, C - A)
+            visibility = np.dot(normal, camera_facing_direction)
+
+            if visibility > 0:
+                pygame.draw.polygon(screen, baseplate_side_colors[i], projected_face)
+
+
 
     pygame.display.flip()
 
