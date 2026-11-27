@@ -1,10 +1,11 @@
 # 3D-Maze-Pygame
-This is a maze simulation built entirely in python with only pygame and numpy. It is currently a work in progress.
+This is a maze simulation built entirely in Python with only pygame and numpy. It is currently a work in progress.
 
 ## Features
  - 3D Coordinate System
  - Perspective Projection
  - World-to-Camera Transformation
+ - Backface Culling
  - Camera Yaw and Pitch Rotation
  - Six-Direction Camera Movement
  - Near Plane Clipping
@@ -104,9 +105,29 @@ $$
 t=\frac{z_{\text{near}}-z_A}{z_B-z_A}
 $$
 
+To get the faces to show up without incorrectly overlapping we use backface culling. To find which faces are supposed to be shown we use the normal vector. A normal vector finds the direction a surface is facing. The normal is calculated using:
+
+$$
+\vec{N}=(B-A)\times(C-A)
+$$
+
+We also need a vector to show which direction the camera is facing which can be calculated with the negative centroid of the face. This is calculated by the following equation.
+
+$$
+\vec{D}=-\frac{A+B+C}{3}
+$$
+
+Once we have the normal and the direction we find the dot product to calculate V, the visibility.
+
+$$
+V=\vec{N}\cdot\vec{D}
+$$
+
+When V is positive, it is visible. When V is negative it is hidden. When V is near 0 it is perpendicular to the camera. To use these calculations, you must have all the faces in your faces array set up in the same winding direction. This program uses clockwise winding.
+
 ## Installation
 
-To use this simulation you must have python installed. You also need to have numpy and pygame installed. If you do not have them installed, open Terminal and run:
+To use this simulation you must have Python installed. You also need to have numpy and pygame installed. If you do not have them installed, open Terminal and run:
 
 ```
 pip install numpy pygame
